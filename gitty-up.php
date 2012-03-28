@@ -1,8 +1,8 @@
 <?php
 /*
-Plugin Name: GITty UP!
+Plugin Name: GITty UP! (forked to for Bitbucket, no longer works with GitHub)
 Plugin URI: http://blairwilliams.com
-Description: This is a simple plugin that listens for GitHub's post hook -- when it recieves this post it automatically updates the latest commit hash in the database. The cron job contained in this plugin will then put the git repo to whatever revision was specified from the post hook.
+Description: This is a simple plugin that listens for git's post hook -- when it recieves this post it automatically updates the latest commit hash in the database. The cron job contained in this plugin will then put the git repo to whatever revision was specified from the post hook.
 Version: 0.0.0.1
 Author: Caseproof, LLC
 Author URI: http://blairwilliams.com
@@ -32,7 +32,7 @@ if(!class_exists('GITtyUp'))
     function __construct()
     {
       add_action('admin_menu', array(&$this, 'menu'));
-      add_action('init', array(&$this, 'github_posthook'), 0);
+      add_action('init', array(&$this, 'git_posthook'), 0);
       add_action('admin_enqueue_scripts', array(&$this,'load_admin_scripts'));
     }
     
@@ -85,12 +85,12 @@ if(!class_exists('GITtyUp'))
               });
             });
           </script>
-          <h3><?php _e('Github Post Hook URL'); ?></h3>
+          <h3><?php _e('Git Post Hook URL'); ?></h3>
           <pre><?php echo site_url( '/gitty-up/posthook/'.$commit_key ); ?></pre>
           <form action="" method="post">
 	          <?php wp_nonce_field( 'update-gittyup-settings' ) ?>
 
-            <h3><?php _e('GIThub Update Type'); ?></h3>
+            <h3><?php _e('Git Update Type'); ?></h3>
             <select id="gtup_update_type" name="gtup_update_type">
               <option value="instant"<?php echo ($gtup_update_type=='instant')?' selected':''; ?>><?php _e('Instant'); ?></option>
               <option value="cron"<?php echo ($gtup_update_type=='cron')?' selected':''; ?>><?php _e('Cron (For use in Clustered Hosting)'); ?></option>
@@ -100,11 +100,11 @@ if(!class_exists('GITtyUp'))
               <pre>*/1 * * * * cd <?php echo WP_PLUGIN_DIR; ?>/gitty-up &amp;&amp; /usr/bin/php ./cron.php</pre>
             </div>
           
-            <h3><?php _e('GIT Repo Configuration'); ?></h3>
+            <h3><?php _e('Git Repo Configuration'); ?></h3>
             <input type="hidden" name="gtup_process" value="Y" />
             <table>
               <tr>
-                <td><?php _e('GIT Repository Path') ?>:</td>
+                <td><?php _e('Git Repository Path') ?>:</td>
                 <td><input type="text" name="gtup_repo_path" value="<?php echo esc_attr( $gtup_repo_path ); ?>" size="75" /></td>
               </tr>
               <tr>
@@ -118,7 +118,7 @@ if(!class_exists('GITtyUp'))
       <?php
     }
 
-    public function github_posthook()
+    public function git_posthook()
     {
       $regexp = "~^/(gitty-up)/(posthook)/(" . $this->get_commit_key() . ')$~';
       if(preg_match($regexp, $_SERVER['REQUEST_URI'], $matches))
@@ -129,9 +129,9 @@ if(!class_exists('GITtyUp'))
         $json = new Services_JSON();
         $commit = $json->decode(stripslashes($_POST['payload']));
 
-        if($commit and isset($commit->commits) and isset($commit->commits[0]) and isset($commit->commits[0]->id))
+        if($commit and isset($commit->commits) and isset($commit->commits[0]) and isset($commit->commits[0]->node))
         {
-          update_option('gtup_repo_commit', $commit->commits[0]->id);
+          update_option('gtup_repo_commit', $commit->commits[0]->node);
           $gtup_update_type = get_option('gtup_update_type');
 
           if( $gtup_update_type == 'instant' )
